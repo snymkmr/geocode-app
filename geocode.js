@@ -18,8 +18,8 @@ async function getPostalCode(address) {
         });
 
         if (response.data && response.data.results && response.data.results.length > 0) {
-            console.log('Full response:', JSON.stringify(response.data, null, 2)); 
-            const postalCode = response.data.results[0].address.postalCode;
+            //console.log('Full response:', JSON.stringify(response.data, null, 2)); 
+            const postalCode = response.data.results[0].address.extendedPostalCode;
             return postalCode;
         } else {
             throw new Error('No results found');
@@ -34,7 +34,7 @@ async function getPostalCode(address) {
 // Example usage:
 (async () => {
     try {
-        const address = '16-8-131/8, Chanchalguda, Amberpet, Kaladera, Hyderabad, India';
+        const address = '5450 Bellaggio Cres, Mississauga';
         const postalCode = await getPostalCode(address);
         console.log('Postal Code:', postalCode);
     } catch (error) {
