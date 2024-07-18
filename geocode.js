@@ -4,37 +4,40 @@ require('dotenv').config();
 // Debug: Print the subscription key to verify it's being loaded
 //console.log('Azure Maps Subscription Key:', process.env.AZURE_MAPS_SUBSCRIPTION_KEY);
 
-const getAddressPostalCode = async (address) => {
-    const subscriptionKey = process.env.AZURE_MAPS_SUBSCRIPTION_KEY;
-    const apiUrl = `https://atlas.microsoft.com/search/address/json?api-version=1.0&subscription-key=${subscriptionKey}&query=${encodeURIComponent(address)}`;
+const subscriptionKey = process.env.AZURE_MAPS_SUBSCRIPTION_KEY;
 
+async function getPostalCode(address) {
+    const url = `https://atlas.microsoft.com/search/address/json`;
     try {
-        const response = await axios.get(apiUrl, { timeout: 5000 });
-
-        if (response.status !== 200) {
-            throw new Error(`Error: Received status code ${response.status}`);
-        }
-
-        const results = response.data.results;
-
-        if (results && results.length > 0) {
-            const postalCodeComponent = results[0].address.postalCode;
-            if (postalCodeComponent) {
-                return postalCodeComponent;
-            } else {
-                throw new Error('No postal code found for the given address.');
+        const response = await axios.get(url, {
+            params: {
+                'api-version': '1.0',
+                'subscription-key': subscriptionKey,
+                query: address
             }
+        });
+
+        if (response.data && response.data.results && response.data.results.length > 0) {
+            console.log('Full response:', JSON.stringify(response.data, null, 2)); 
+            const postalCode = response.data.results[0].address.postalCode;
+            return postalCode;
         } else {
-            throw new Error('No results found for the given address.');
+            throw new Error('No results found');
         }
     } catch (error) {
         console.error('Error fetching postal code:', error.message);
-        return null;
+        console.error('Error response:', error.response ? error.response.data : error.message);
+        throw error;
     }
-};
+}
 
+// Example usage:
 (async () => {
-    const address = '1600 Amphitheatre Parkway, Mountain View, CA';
-    const postalCode = await getAddressPostalCode(address);
-    console.log(`Postal code for "${address}" is:`, postalCode);
+    try {
+        const address = '16-8-131/8, Chanchalguda, Amberpet, Kaladera, Hyderabad, India';
+        const postalCode = await getPostalCode(address);
+        console.log('Postal Code:', postalCode);
+    } catch (error) {
+        console.error(error);
+    }
 })();
