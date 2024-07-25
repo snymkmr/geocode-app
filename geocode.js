@@ -63,9 +63,8 @@ async function processCsv() {
             console.log('CSV file successfully processed.');
             for (const address of addresses) {
                 const postalCode = await getPostalCode(address);
-                console.log(`Address: ${address} - Postal Code: ${postalCode}`);
+                console.log(`Address: ${address} \nPostal Code: ${postalCode}`);
             }
         });
 }
-
 processCsv();
