@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+const csv = require('csv-parser');
 const axios = require('axios');
 require('dotenv').config();
 
@@ -5,6 +8,8 @@ require('dotenv').config();
 //console.log('Azure Maps Subscription Key:', process.env.AZURE_MAPS_SUBSCRIPTION_KEY);
 
 const subscriptionKey = process.env.AZURE_MAPS_SUBSCRIPTION_KEY;
+
+let postalCode;
 
 async function getPostalCode(address) {
     const url = `https://atlas.microsoft.com/search/address/json`;
@@ -18,26 +23,49 @@ async function getPostalCode(address) {
         });
 
         if (response.data && response.data.results && response.data.results.length > 0) {
-            //console.log('Full response:', JSON.stringify(response.data, null, 2)); 
-            const postalCode = response.data.results[0].address.extendedPostalCode;
+            for (const result of response.data.results) {
+                if (result.address) {
+                    //console.log('Full response:', JSON.stringify(response.data, null, 2));
+
+                    if (response.data.results[0].address.extendedPostalCode && (response.data.results[0].address.countryCode == 'CA' || response.data.results[0].address.countryCode == 'GB')) {
+                        postalCode = response.data.results[0].address.extendedPostalCode;
+                    } else if (result.address.postalCode) {
+                        postalCode = response.data.results[0].address.postalCode
+                    }
+                    if (postalCode) break;
+                }
+            }
+
+            if (postalCode == undefined) {
+                console.log('Full response:', JSON.stringify(response.data, null, 2));
+                postalCode = 'Not Found'
+            }
             return postalCode;
         } else {
             throw new Error('No results found');
         }
     } catch (error) {
-        console.error('Error fetching postal code:', error.message);
-        console.error('Error response:', error.response ? error.response.data : error.message);
-        throw error;
+        console.error(`Error fetching postal code for address "${address}":`, error.message);
+        return null;
     }
 }
 
-// Example usage:
-(async () => {
-    try {
-        const address = '5450 Bellaggio Cres, Mississauga';
-        const postalCode = await getPostalCode(address);
-        console.log('Postal Code:', postalCode);
-    } catch (error) {
-        console.error(error);
-    }
-})();
+async function processCsv() {
+    const addresses = [];
+
+    fs.createReadStream(path.join(__dirname, 'addresses.csv'))
+        .pipe(csv())
+        .on('data', (row) => {
+            const address = `${row['Street Address']}, ${row.City}, ${row.State}, ${row['Country Code']}`;
+            addresses.push(address);
+        })
+        .on('end', async () => {
+            console.log('CSV file successfully processed.');
+            for (const address of addresses) {
+                const postalCode = await getPostalCode(address);
+                console.log(`Address: ${address} - Postal Code: ${postalCode}`);
+            }
+        });
+}
+
+processCsv();
